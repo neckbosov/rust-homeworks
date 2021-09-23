@@ -1,6 +1,6 @@
 use std::io::{self, BufWriter, Write};
 
-use crate::sphere::{scene_intersect, Sphere};
+use crate::sphere::{scene_intersect, SceneIntersection, Sphere};
 use crate::vec3f::Vec3f;
 
 pub struct Light {
@@ -8,15 +8,24 @@ pub struct Light {
     pub intensity: f32,
 }
 
+fn reflect(v: Vec3f, norm: Vec3f) -> Vec3f {
+    v - norm * 2.0 * (v * norm)
+}
+
 fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light]) -> Vec3f {
-    if let Some(intersection) = scene_intersect(origin, direction, &spheres) {
+    if let Some(SceneIntersection { distance: _, hit, normal, material }) = scene_intersect(origin, direction, &spheres) {
         let mut diffuse_light_intensity = 0.0;
+        let mut spectacular_light_intensity = 0.0;
         for light in lights {
-            let mut light_direction = light.position - intersection.hit;
+            let mut light_direction = light.position - hit;
             light_direction.normalize();
-            diffuse_light_intensity += light.intensity * 0.0f32.max(light_direction * intersection.normal);
+            diffuse_light_intensity += light.intensity * 0.0f32.max(light_direction * normal);
+            spectacular_light_intensity += 0.0f32
+                .max(reflect(light_direction, normal) * direction)
+                .powf(material.spectacular_component) * light.intensity;
         }
-        intersection.material.diffuse_color * diffuse_light_intensity
+        material.diffuse_color * diffuse_light_intensity * material.albedo.0 +
+            Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo.1
     } else {
         Vec3f::new(0.2, 0.7, 0.8)
     }
@@ -43,7 +52,11 @@ pub fn render(spheres: &[Sphere], lights: &[Light]) -> io::Result<()> {
     let mut writer = BufWriter::new(file);
     writeln!(&mut writer, "P6\n{} {}\n255", width, height)?;
     let mut buffer = Vec::with_capacity(width * height * 3);
-    for vector in frame_buffer {
+    for mut vector in frame_buffer {
+        let max_coordinate = vector[0].max(vector[1]).max(vector[2]);
+        if max_coordinate > 1.0 {
+            vector = vector * (1.0 / max_coordinate);
+        }
         for i in 0..3 {
             buffer.push((255.0 * vector[i].clamp(0.0, 1.0)) as u8);
         }
