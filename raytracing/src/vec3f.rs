@@ -1,4 +1,4 @@
-use std::ops::{Index, Mul, Sub};
+use std::ops::{Add, Index, Mul, Sub};
 
 #[derive(Default, Copy, Clone, Debug)]
 pub struct Vec3f {
@@ -20,6 +20,18 @@ impl Index<usize> for Vec3f {
     }
 }
 
+impl Add for Vec3f {
+    type Output = Vec3f;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
 impl Sub for Vec3f {
     type Output = Vec3f;
 
@@ -37,6 +49,18 @@ impl Mul for Vec3f {
 
     fn mul(self, rhs: Self) -> Self::Output {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+impl Mul<f32> for Vec3f {
+    type Output = Vec3f;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
     }
 }
 

@@ -1,9 +1,21 @@
 use crate::vec3f::Vec3f;
 
 #[derive(Copy, Clone, Debug)]
+pub struct Material {
+    pub diffuse_color: Vec3f,
+}
+
+impl Default for Material {
+    fn default() -> Self {
+        Self { diffuse_color: Vec3f { x: 0.0, y: 0.0, z: 0.0 } }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Sphere {
     pub center: Vec3f,
     pub radius: f32,
+    pub material: Material,
 }
 
 impl Sphere {
@@ -33,3 +45,42 @@ impl Sphere {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct SceneIntersection {
+    pub distance: f32,
+    pub hit: Vec3f,
+    pub normal: Vec3f,
+    pub material: Material,
+}
+
+pub fn scene_intersect(origin: Vec3f, direction: Vec3f, spheres: &[Sphere]) -> Option<SceneIntersection> {
+    let mut res: Option<SceneIntersection> = None;
+    for sphere in spheres {
+        if let Some(dist) = sphere.ray_intersect(origin, direction) {
+            if let Some(SceneIntersection { distance, .. }) = res {
+                if dist < distance {
+                    let hit = origin + direction * dist;
+                    let mut normal = hit - sphere.center;
+                    normal.normalize();
+                    res = Some(SceneIntersection {
+                        distance: dist,
+                        hit,
+                        normal,
+                        material: sphere.material,
+                    })
+                }
+            } else {
+                let hit = origin + direction * dist;
+                let mut normal = hit - sphere.center;
+                normal.normalize();
+                res = Some(SceneIntersection {
+                    distance: dist,
+                    hit,
+                    normal,
+                    material: sphere.material,
+                })
+            }
+        }
+    }
+    res
+}
