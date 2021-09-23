@@ -1,7 +1,7 @@
 use std::io::{self, BufWriter, Write};
 
 use crate::sphere::{scene_intersect, SceneIntersection, Sphere};
-use crate::vec3f::Vec3f;
+use crate::vec::Vec3f;
 
 pub struct Light {
     pub position: Vec3f,
@@ -12,6 +12,25 @@ fn reflect(v: Vec3f, norm: Vec3f) -> Vec3f {
     v - norm * 2.0 * (v * norm)
 }
 
+fn refract(v: Vec3f, norm: Vec3f, refractive_index: f32) -> Vec3f {
+    let mut cosi = -(v * norm).clamp(-1.0, 1.0);
+    let mut etai = 1.0;
+    let mut etat = refractive_index;
+    let mut n = norm;
+    if cosi < 0.0 {
+        cosi = -cosi;
+        std::mem::swap(&mut etai, &mut etat);
+        n = Vec3f::default() - norm;
+    }
+    let eta = etai / etat;
+    let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+    if k < 0.0 {
+        Vec3f::new(1.0, 0.0, 0.0)
+    } else {
+        v * eta + n * (eta * cosi - k.sqrt())
+    }
+}
+
 fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light], depth: usize) -> Vec3f {
     if depth > 4 {
         return Vec3f::new(0.2, 0.7, 0.8);
@@ -19,12 +38,22 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
     if let Some(SceneIntersection { distance: _, hit, normal, material }) = scene_intersect(origin, direction, &spheres) {
         let mut reflect_direction = reflect(direction, normal);
         reflect_direction.normalize();
+        let mut refract_direction = refract(direction, normal, material.refractive_index);
+        refract_direction.normalize();
+
         let reflect_orig = if reflect_direction * normal < 0.0 {
             hit - normal * 1e-3
         } else {
             hit + normal * 1e-3
         };
+        let refract_orig = if refract_direction * normal < 0.0 {
+            hit - normal * 1e-3
+        } else {
+            hit + normal * 1e-3
+        };
+
         let reflect_color = cast_ray(reflect_orig, reflect_direction, &spheres, &lights, depth + 1);
+        let refract_color = cast_ray(refract_orig, refract_direction, &spheres, &lights, depth + 1);
 
         let mut diffuse_light_intensity = 0.0;
         let mut spectacular_light_intensity = 0.0;
@@ -51,7 +80,7 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
         }
         material.diffuse_color * diffuse_light_intensity * material.albedo[0] +
             Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo[1] +
-            reflect_color * material.albedo[2]
+            reflect_color * material.albedo[2] + refract_color * material.albedo[3]
     } else {
         Vec3f::new(0.2, 0.7, 0.8)
     }

@@ -1,3 +1,3 @@
-pub mod vec3f;
+pub mod vec;
 pub mod sphere;
 pub mod render;
