@@ -1,5 +1,3 @@
-use std::prelude::v1::Option::Some;
-
 use crate::sphere::{Material, Sphere};
 use crate::vec::Vec3f;
 
