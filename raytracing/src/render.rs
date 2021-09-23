@@ -12,8 +12,20 @@ fn reflect(v: Vec3f, norm: Vec3f) -> Vec3f {
     v - norm * 2.0 * (v * norm)
 }
 
-fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light]) -> Vec3f {
+fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light], depth: usize) -> Vec3f {
+    if depth > 4 {
+        return Vec3f::new(0.2, 0.7, 0.8);
+    }
     if let Some(SceneIntersection { distance: _, hit, normal, material }) = scene_intersect(origin, direction, &spheres) {
+        let mut reflect_direction = reflect(direction, normal);
+        reflect_direction.normalize();
+        let reflect_orig = if reflect_direction * normal < 0.0 {
+            hit - normal * 1e-3
+        } else {
+            hit + normal * 1e-3
+        };
+        let reflect_color = cast_ray(reflect_orig, reflect_direction, &spheres, &lights, depth + 1);
+
         let mut diffuse_light_intensity = 0.0;
         let mut spectacular_light_intensity = 0.0;
         for light in lights {
@@ -37,8 +49,9 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
                 .max(reflect(light_direction, normal) * direction)
                 .powf(material.spectacular_component) * light.intensity;
         }
-        material.diffuse_color * diffuse_light_intensity * material.albedo.0 +
-            Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo.1
+        material.diffuse_color * diffuse_light_intensity * material.albedo[0] +
+            Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo[1] +
+            reflect_color * material.albedo[2]
     } else {
         Vec3f::new(0.2, 0.7, 0.8)
     }
@@ -56,7 +69,7 @@ pub fn render(spheres: &[Sphere], lights: &[Light]) -> io::Result<()> {
             let y = -(2.0 * (j as f32 + 0.5) / height as f32 - 1.0) * (fov / 2.0).tan();
             let mut direction = Vec3f::new(x, y, -1.0);
             direction.normalize();
-            frame_buffer[i + j * width] = cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, &spheres, &lights);
+            frame_buffer[i + j * width] = cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, &spheres, &lights, 0);
         }
     }
 

@@ -2,14 +2,18 @@ use crate::vec3f::Vec3f;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Material {
-    pub albedo: (f32, f32),
+    pub albedo: Vec3f,
     pub diffuse_color: Vec3f,
     pub spectacular_component: f32,
 }
 
 impl Default for Material {
     fn default() -> Self {
-        Self { albedo: (1.0, 0.0), diffuse_color: Vec3f::new(0.0, 0.0, 0.0), spectacular_component: 0.0 }
+        Self {
+            albedo: Vec3f::new(1.0, 0.0, 0.0),
+            diffuse_color: Vec3f::new(0.0, 0.0, 0.0),
+            spectacular_component: 0.0,
+        }
     }
 }
 
