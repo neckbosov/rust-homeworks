@@ -19,6 +19,19 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
         for light in lights {
             let mut light_direction = light.position - hit;
             light_direction.normalize();
+            let light_distance = (light.position - hit).norm();
+
+            let shadow_orig = if light_direction * normal < 0.0 {
+                hit - normal * 1e-3
+            } else {
+                hit + normal * 1e-3
+            };
+            if let Some(intersection) = scene_intersect(shadow_orig, light_direction, &spheres) {
+                if (intersection.hit - shadow_orig).norm() < light_distance {
+                    continue;
+                }
+            }
+
             diffuse_light_intensity += light.intensity * 0.0f32.max(light_direction * normal);
             spectacular_light_intensity += 0.0f32
                 .max(reflect(light_direction, normal) * direction)

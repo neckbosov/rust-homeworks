@@ -68,9 +68,12 @@ impl Vec3f {
         }
     }
     pub fn normalize(&mut self) {
-        let norm = (*self * *self).sqrt();
+        let norm = self.norm();
         for coord in &mut self.coordinates {
             *coord /= norm;
         }
+    }
+    pub fn norm(&self) -> f32 {
+        (*self * *self).sqrt()
     }
 }
