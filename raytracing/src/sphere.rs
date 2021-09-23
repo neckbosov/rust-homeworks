@@ -11,7 +11,9 @@ pub struct Material {
 impl Default for Material {
     fn default() -> Self {
         Self {
-            albedo: Vec4f { coordinates: [1.0, 0.0, 0.0, 0.0] },
+            albedo: Vec4f {
+                coordinates: [1.0, 0.0, 0.0, 0.0],
+            },
             diffuse_color: Vec3f::new(0.0, 0.0, 0.0),
             spectacular_component: 0.0,
             refractive_index: 1.0,
@@ -33,11 +35,13 @@ impl Sphere {
     pub fn ray_intersect(&self, origin: Vec3f, direction: Vec3f) -> Option<f32> {
         let origin_to_center = self.center - origin;
         let otc_ray_projection = origin_to_center * direction;
-        let center_to_ray_distance_sqr = origin_to_center * origin_to_center - otc_ray_projection * otc_ray_projection;
+        let center_to_ray_distance_sqr =
+            origin_to_center * origin_to_center - otc_ray_projection * otc_ray_projection;
         if center_to_ray_distance_sqr > self.radius * self.radius {
             return None;
         }
-        let radius_to_ray_projection = (self.radius * self.radius - center_to_ray_distance_sqr).sqrt();
+        let radius_to_ray_projection =
+            (self.radius * self.radius - center_to_ray_distance_sqr).sqrt();
         let origin_to_sphere_distance = {
             let t0 = otc_ray_projection - radius_to_ray_projection;
             let t1 = otc_ray_projection + radius_to_ray_projection;

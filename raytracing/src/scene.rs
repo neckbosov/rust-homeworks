@@ -8,7 +8,11 @@ pub struct SceneIntersection {
     pub material: Material,
 }
 
-pub fn scene_intersect(origin: Vec3f, direction: Vec3f, spheres: &[Sphere]) -> Option<SceneIntersection> {
+pub fn scene_intersect(
+    origin: Vec3f,
+    direction: Vec3f,
+    spheres: &[Sphere],
+) -> Option<SceneIntersection> {
     let mut res: Option<SceneIntersection> = None;
     let mut distance: Option<f32> = None;
     for sphere in spheres {
@@ -30,17 +34,23 @@ pub fn scene_intersect(origin: Vec3f, direction: Vec3f, spheres: &[Sphere]) -> O
         let dist = -(origin[1] + 4.0) / direction[1];
         let point = origin + direction * dist;
 
-        if dist > 0.0 && point[0].abs() < 10.0 && point[2] < -10.0 && point[2] > -30.0 && distance.filter(|val| *val <= dist).is_none() {
+        if dist > 0.0
+            && point[0].abs() < 10.0
+            && point[2] < -10.0
+            && point[2] > -30.0
+            && distance.filter(|val| *val <= dist).is_none()
+        {
             let mut material = if let Some(intersection) = res {
                 intersection.material
             } else {
                 Material::default()
             };
-            material.diffuse_color = if ((0.5 * point[0] + 1000.0) as i32 + (0.5 * point[2]) as i32) % 2 == 1 {
-                Vec3f::new(1.0, 1.0, 1.0)
-            } else {
-                Vec3f::new(1.0, 0.7, 0.3)
-            } * 0.3;
+            material.diffuse_color =
+                if ((0.5 * point[0] + 1000.0) as i32 + (0.5 * point[2]) as i32) % 2 == 1 {
+                    Vec3f::new(1.0, 1.0, 1.0)
+                } else {
+                    Vec3f::new(1.0, 0.7, 0.3)
+                } * 0.3;
             res = Some(SceneIntersection {
                 hit: point,
                 normal: Vec3f::new(0.0, 1.0, 0.0),

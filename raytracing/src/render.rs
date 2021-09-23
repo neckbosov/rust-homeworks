@@ -32,11 +32,22 @@ fn refract(v: Vec3f, norm: Vec3f, refractive_index: f32) -> Vec3f {
     }
 }
 
-fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light], depth: usize) -> Vec3f {
+fn cast_ray(
+    origin: Vec3f,
+    direction: Vec3f,
+    spheres: &[Sphere],
+    lights: &[Light],
+    depth: usize,
+) -> Vec3f {
     if depth > 4 {
         return Vec3f::new(0.2, 0.7, 0.8);
     }
-    if let Some(SceneIntersection { hit, normal, material }) = scene_intersect(origin, direction, spheres) {
+    if let Some(SceneIntersection {
+                    hit,
+                    normal,
+                    material,
+                }) = scene_intersect(origin, direction, spheres)
+    {
         let mut reflect_direction = reflect(direction, normal);
         reflect_direction.normalize();
         let mut refract_direction = refract(direction, normal, material.refractive_index);
@@ -77,11 +88,13 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
             diffuse_light_intensity += light.intensity * 0.0f32.max(light_direction * normal);
             spectacular_light_intensity += 0.0f32
                 .max(reflect(light_direction, normal) * direction)
-                .powf(material.spectacular_component) * light.intensity;
+                .powf(material.spectacular_component)
+                * light.intensity;
         }
-        material.diffuse_color * diffuse_light_intensity * material.albedo[0] +
-            Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo[1] +
-            reflect_color * material.albedo[2] + refract_color * material.albedo[3]
+        material.diffuse_color * diffuse_light_intensity * material.albedo[0]
+            + Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo[1]
+            + reflect_color * material.albedo[2]
+            + refract_color * material.albedo[3]
     } else {
         Vec3f::new(0.2, 0.7, 0.8)
     }
@@ -95,14 +108,16 @@ pub fn render(spheres: &[Sphere], lights: &[Light]) -> io::Result<()> {
     let mut frame_buffer = vec![Vec3f::default(); width * height];
     for j in 0..height {
         for i in 0..width {
-            let x = (2.0 * (i as f32 + 0.5) / width as f32 - 1.0) * (fov / 2.0).tan() * width as f32 / height as f32;
+            let x =
+                (2.0 * (i as f32 + 0.5) / width as f32 - 1.0) * (fov / 2.0).tan() * width as f32
+                    / height as f32;
             let y = -(2.0 * (j as f32 + 0.5) / height as f32 - 1.0) * (fov / 2.0).tan();
             let mut direction = Vec3f::new(x, y, -1.0);
             direction.normalize();
-            frame_buffer[i + j * width] = cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, spheres, lights, 0);
+            frame_buffer[i + j * width] =
+                cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, spheres, lights, 0);
         }
     }
-
 
     let file = std::fs::File::create("./out.ppm")?;
     let mut writer = BufWriter::new(file);

@@ -8,7 +8,7 @@ pub struct MyVec<const N: usize> {
 impl<const N: usize> Default for MyVec<N> {
     fn default() -> Self {
         Self {
-            coordinates: [0.0; N]
+            coordinates: [0.0; N],
         }
     }
 }
@@ -87,7 +87,7 @@ impl<const N: usize> MyVec<N> {
 impl Vec3f {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self {
-            coordinates: [x, y, z]
+            coordinates: [x, y, z],
         }
     }
 }
