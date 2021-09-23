@@ -1,6 +1,7 @@
 use std::io::{self, BufWriter, Write};
 
-use crate::sphere::{scene_intersect, SceneIntersection, Sphere};
+use crate::scene::{scene_intersect, SceneIntersection};
+use crate::sphere::Sphere;
 use crate::vec::Vec3f;
 
 pub struct Light {
@@ -35,7 +36,7 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
     if depth > 4 {
         return Vec3f::new(0.2, 0.7, 0.8);
     }
-    if let Some(SceneIntersection { distance: _, hit, normal, material }) = scene_intersect(origin, direction, &spheres) {
+    if let Some(SceneIntersection { hit, normal, material }) = scene_intersect(origin, direction, spheres) {
         let mut reflect_direction = reflect(direction, normal);
         reflect_direction.normalize();
         let mut refract_direction = refract(direction, normal, material.refractive_index);
@@ -52,8 +53,8 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
             hit + normal * 1e-3
         };
 
-        let reflect_color = cast_ray(reflect_orig, reflect_direction, &spheres, &lights, depth + 1);
-        let refract_color = cast_ray(refract_orig, refract_direction, &spheres, &lights, depth + 1);
+        let reflect_color = cast_ray(reflect_orig, reflect_direction, spheres, lights, depth + 1);
+        let refract_color = cast_ray(refract_orig, refract_direction, spheres, lights, depth + 1);
 
         let mut diffuse_light_intensity = 0.0;
         let mut spectacular_light_intensity = 0.0;
@@ -67,7 +68,7 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere], lights: &[Light
             } else {
                 hit + normal * 1e-3
             };
-            if let Some(intersection) = scene_intersect(shadow_orig, light_direction, &spheres) {
+            if let Some(intersection) = scene_intersect(shadow_orig, light_direction, spheres) {
                 if (intersection.hit - shadow_orig).norm() < light_distance {
                     continue;
                 }
@@ -98,7 +99,7 @@ pub fn render(spheres: &[Sphere], lights: &[Light]) -> io::Result<()> {
             let y = -(2.0 * (j as f32 + 0.5) / height as f32 - 1.0) * (fov / 2.0).tan();
             let mut direction = Vec3f::new(x, y, -1.0);
             direction.normalize();
-            frame_buffer[i + j * width] = cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, &spheres, &lights, 0);
+            frame_buffer[i + j * width] = cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, spheres, lights, 0);
         }
     }
 
