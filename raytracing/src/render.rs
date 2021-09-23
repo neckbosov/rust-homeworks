@@ -7,7 +7,7 @@ fn cast_ray(origin: Vec3f, direction: Vec3f, spheres: &[Sphere]) -> Vec3f {
     if let Some(intersection) = scene_intersect(origin, direction, &spheres) {
         intersection.material.diffuse_color
     } else {
-        Vec3f { x: 0.2, y: 0.7, z: 0.8 }
+        Vec3f::new(0.2, 0.7, 0.8)
     }
 }
 
@@ -21,9 +21,9 @@ pub fn render(spheres: &[Sphere]) -> io::Result<()> {
         for i in 0..width {
             let x = (2.0 * (i as f32 + 0.5) / width as f32 - 1.0) * (fov / 2.0).tan() * width as f32 / height as f32;
             let y = -(2.0 * (j as f32 + 0.5) / height as f32 - 1.0) * (fov / 2.0).tan();
-            let mut direction = Vec3f { x, y, z: -1.0 };
+            let mut direction = Vec3f::new(x, y, -1.0);
             direction.normalize();
-            frame_buffer[i + j * width] = cast_ray(Vec3f { x: 0.0, y: 0.0, z: 0.0 }, direction, &spheres);
+            frame_buffer[i + j * width] = cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, &spheres);
         }
     }
 

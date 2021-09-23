@@ -7,7 +7,7 @@ pub struct Material {
 
 impl Default for Material {
     fn default() -> Self {
-        Self { diffuse_color: Vec3f { x: 0.0, y: 0.0, z: 0.0 } }
+        Self { diffuse_color: Vec3f::new(0.0, 0.0, 0.0) }
     }
 }
 
