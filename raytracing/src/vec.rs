@@ -1,22 +1,19 @@
 use std::ops::{Add, Index, Mul, Sub};
 
 #[derive(Copy, Clone, Debug)]
-pub struct MyVec<const N: usize> {
-    pub coordinates: [f32; N],
+pub struct Vec3f {
+    pub coordinates: [f32; 3],
 }
 
-impl<const N: usize> Default for MyVec<N> {
+impl Default for Vec3f {
     fn default() -> Self {
         Self {
-            coordinates: [0.0; N],
+            coordinates: [0.0; 3],
         }
     }
 }
 
-pub type Vec3f = MyVec<3>;
-pub type Vec4f = MyVec<4>;
-
-impl<const N: usize> Index<usize> for MyVec<N> {
+impl Index<usize> for Vec3f {
     type Output = f32;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -24,7 +21,7 @@ impl<const N: usize> Index<usize> for MyVec<N> {
     }
 }
 
-impl<const N: usize> Add for MyVec<N> {
+impl Add for Vec3f {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -36,7 +33,7 @@ impl<const N: usize> Add for MyVec<N> {
     }
 }
 
-impl<const N: usize> Sub for MyVec<N> {
+impl Sub for Vec3f {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -48,7 +45,7 @@ impl<const N: usize> Sub for MyVec<N> {
     }
 }
 
-impl<const N: usize> Mul for MyVec<N> {
+impl Mul for Vec3f {
     type Output = f32;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -60,7 +57,7 @@ impl<const N: usize> Mul for MyVec<N> {
     }
 }
 
-impl<const N: usize> Mul<f32> for MyVec<N> {
+impl Mul<f32> for Vec3f {
     type Output = Self;
 
     fn mul(self, rhs: f32) -> Self::Output {
@@ -72,19 +69,20 @@ impl<const N: usize> Mul<f32> for MyVec<N> {
     }
 }
 
-impl<const N: usize> MyVec<N> {
+impl Vec3f {
     pub fn normalize(&mut self) {
         let norm = self.norm();
         for coord in &mut self.coordinates {
             *coord /= norm;
         }
     }
+    pub fn normalized(mut self) -> Self {
+        self.normalize();
+        self
+    }
     pub fn norm(&self) -> f32 {
         (*self * *self).sqrt()
     }
-}
-
-impl Vec3f {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self {
             coordinates: [x, y, z],

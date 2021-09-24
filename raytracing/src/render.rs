@@ -1,109 +1,21 @@
 use std::io::{self, BufWriter, Write};
 
-use crate::scene::{scene_intersect, SceneIntersection};
-use crate::sphere::Sphere;
+use crate::primitives::Ray;
+use crate::scene::Scene;
 use crate::vec::Vec3f;
 
-pub struct Light {
-    pub position: Vec3f,
-    pub intensity: f32,
+#[derive(Debug, Copy, Clone)]
+pub struct RenderParams {
+    pub field_of_view: f32,
+    pub width: usize,
+    pub height: usize,
+    pub depth: usize,
 }
 
-fn reflect(v: Vec3f, norm: Vec3f) -> Vec3f {
-    v - norm * 2.0 * (v * norm)
-}
-
-fn refract(v: Vec3f, norm: Vec3f, refractive_index: f32) -> Vec3f {
-    let mut cosi = -(v * norm).clamp(-1.0, 1.0);
-    let mut etai = 1.0;
-    let mut etat = refractive_index;
-    let mut n = norm;
-    if cosi < 0.0 {
-        cosi = -cosi;
-        std::mem::swap(&mut etai, &mut etat);
-        n = Vec3f::default() - norm;
-    }
-    let eta = etai / etat;
-    let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
-    if k < 0.0 {
-        Vec3f::new(1.0, 0.0, 0.0)
-    } else {
-        v * eta + n * (eta * cosi - k.sqrt())
-    }
-}
-
-fn cast_ray(
-    origin: Vec3f,
-    direction: Vec3f,
-    spheres: &[Sphere],
-    lights: &[Light],
-    depth: usize,
-) -> Vec3f {
-    if depth > 4 {
-        return Vec3f::new(0.2, 0.7, 0.8);
-    }
-    if let Some(SceneIntersection {
-                    hit,
-                    normal,
-                    material,
-                }) = scene_intersect(origin, direction, spheres)
-    {
-        let mut reflect_direction = reflect(direction, normal);
-        reflect_direction.normalize();
-        let mut refract_direction = refract(direction, normal, material.refractive_index);
-        refract_direction.normalize();
-
-        let reflect_orig = if reflect_direction * normal < 0.0 {
-            hit - normal * 1e-3
-        } else {
-            hit + normal * 1e-3
-        };
-        let refract_orig = if refract_direction * normal < 0.0 {
-            hit - normal * 1e-3
-        } else {
-            hit + normal * 1e-3
-        };
-
-        let reflect_color = cast_ray(reflect_orig, reflect_direction, spheres, lights, depth + 1);
-        let refract_color = cast_ray(refract_orig, refract_direction, spheres, lights, depth + 1);
-
-        let mut diffuse_light_intensity = 0.0;
-        let mut spectacular_light_intensity = 0.0;
-        for light in lights {
-            let mut light_direction = light.position - hit;
-            light_direction.normalize();
-            let light_distance = (light.position - hit).norm();
-
-            let shadow_orig = if light_direction * normal < 0.0 {
-                hit - normal * 1e-3
-            } else {
-                hit + normal * 1e-3
-            };
-            if let Some(intersection) = scene_intersect(shadow_orig, light_direction, spheres) {
-                if (intersection.hit - shadow_orig).norm() < light_distance {
-                    continue;
-                }
-            }
-
-            diffuse_light_intensity += light.intensity * 0.0f32.max(light_direction * normal);
-            spectacular_light_intensity += 0.0f32
-                .max(reflect(light_direction, normal) * direction)
-                .powf(material.spectacular_component)
-                * light.intensity;
-        }
-        material.diffuse_color * diffuse_light_intensity * material.albedo[0]
-            + Vec3f::new(1.0, 1.0, 1.0) * spectacular_light_intensity * material.albedo[1]
-            + reflect_color * material.albedo[2]
-            + refract_color * material.albedo[3]
-    } else {
-        Vec3f::new(0.2, 0.7, 0.8)
-    }
-}
-
-pub fn render(spheres: &[Sphere], lights: &[Light]) -> io::Result<()> {
-    let width = 1024;
-    let height = 768;
-    let fov = std::f32::consts::PI / 2.0;
+pub fn render(scene: &Scene, params: RenderParams) -> io::Result<()> {
+    let width = params.width;
+    let height = params.height;
+    let fov = params.field_of_view;
 
     let mut frame_buffer = vec![Vec3f::default(); width * height];
     for j in 0..height {
@@ -114,24 +26,30 @@ pub fn render(spheres: &[Sphere], lights: &[Light]) -> io::Result<()> {
             let y = -(2.0 * (j as f32 + 0.5) / height as f32 - 1.0) * (fov / 2.0).tan();
             let mut direction = Vec3f::new(x, y, -1.0);
             direction.normalize();
-            frame_buffer[i + j * width] =
-                cast_ray(Vec3f::new(0.0, 0.0, 0.0), direction, spheres, lights, 0);
+            frame_buffer[i + j * width] = scene.cast_ray(
+                Ray {
+                    origin: Vec3f::new(0.0, 0.0, 0.0),
+                    direction,
+                },
+                params.depth,
+            );
         }
     }
 
-    let file = std::fs::File::create("./out.ppm")?;
-    let mut writer = BufWriter::new(file);
-    writeln!(&mut writer, "P6\n{} {}\n255", width, height)?;
-    let mut buffer = Vec::with_capacity(width * height * 3);
+    let mut raw_buffer = Vec::with_capacity(width * height * 3);
     for mut vector in frame_buffer {
         let max_coordinate = vector[0].max(vector[1]).max(vector[2]);
         if max_coordinate > 1.0 {
             vector = vector * (1.0 / max_coordinate);
         }
         for i in 0..3 {
-            buffer.push((255.0 * vector[i].clamp(0.0, 1.0)) as u8);
+            raw_buffer.push((255.0 * vector[i].clamp(0.0, 1.0)) as u8);
         }
     }
-    writer.write_all(&buffer)?;
+
+    let file = std::fs::File::create("./out.ppm")?;
+    let mut writer = BufWriter::new(file);
+    writeln!(&mut writer, "P6\n{} {}\n255", width, height)?;
+    writer.write_all(&raw_buffer)?;
     Ok(())
 }

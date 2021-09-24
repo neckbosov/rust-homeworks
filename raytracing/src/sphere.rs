@@ -1,25 +1,6 @@
-use crate::vec::{Vec3f, Vec4f};
-
-#[derive(Copy, Clone, Debug)]
-pub struct Material {
-    pub albedo: Vec4f,
-    pub diffuse_color: Vec3f,
-    pub spectacular_component: f32,
-    pub refractive_index: f32,
-}
-
-impl Default for Material {
-    fn default() -> Self {
-        Self {
-            albedo: Vec4f {
-                coordinates: [1.0, 0.0, 0.0, 0.0],
-            },
-            diffuse_color: Vec3f::new(0.0, 0.0, 0.0),
-            spectacular_component: 0.0,
-            refractive_index: 1.0,
-        }
-    }
-}
+use crate::primitives::{Material, Ray};
+use crate::scene::{RayIntersection, Renderable};
+use crate::vec::Vec3f;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Sphere {
@@ -28,13 +9,13 @@ pub struct Sphere {
     pub material: Material,
 }
 
-impl Sphere {
+impl Renderable for Sphere {
     /// Check if given ray with such `origin` and `direction` intersects sphere.
     ///
     /// Returns `None` if not, else returns `Some(dist)` where `dist` is distance from `origin` to sphere.
-    pub fn ray_intersect(&self, origin: Vec3f, direction: Vec3f) -> Option<f32> {
-        let origin_to_center = self.center - origin;
-        let otc_ray_projection = origin_to_center * direction;
+    fn ray_intersect(&self, ray: Ray) -> Option<RayIntersection> {
+        let origin_to_center = self.center - ray.origin;
+        let otc_ray_projection = origin_to_center * ray.direction;
         let center_to_ray_distance_sqr =
             origin_to_center * origin_to_center - otc_ray_projection * otc_ray_projection;
         if center_to_ray_distance_sqr > self.radius * self.radius {
@@ -53,6 +34,13 @@ impl Sphere {
                 return None;
             }
         };
-        Some(origin_to_sphere_distance)
+        let hit = ray.origin + ray.direction * origin_to_sphere_distance;
+        let normal = (hit - self.center).normalized();
+        Some(RayIntersection {
+            distance: origin_to_sphere_distance,
+            hit,
+            normal,
+            material: self.material,
+        })
     }
 }
