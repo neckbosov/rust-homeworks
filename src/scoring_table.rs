@@ -17,7 +17,7 @@ where
 }
 
 pub fn transform(old: &HashMap<u32, Vec<char>>) -> HashMap<char, u32> {
-    transform_iter(old.into_iter())
+    transform_iter(old.iter())
 }
 
 pub fn score(input: &str, score_table: &HashMap<char, u32>) -> u32 {
