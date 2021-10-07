@@ -242,4 +242,13 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(expect!(), got);
     }
+
+    #[test]
+    fn test_map() {
+        let fizzbuzz = fizz_buzz::<i32>();
+        let got = (1..=16)
+            .map(|x| fizzbuzz.apply_elem(&x))
+            .collect::<Vec<_>>();
+        assert_eq!(expect!(), got);
+    }
 }
