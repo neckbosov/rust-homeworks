@@ -8,6 +8,9 @@ pub enum Comparison {
 
 // Knuth-Moris-Pratt algorithm for prefix function calculation and substring search
 fn is_sublist<T: PartialEq>(a: &[T], b: &[T]) -> bool {
+    if a.len() > b.len() {
+        return false;
+    }
     let mut prefix_function = Vec::with_capacity(a.len() + 1);
     let mut last_pf_val: usize = 0;
     if !a.is_empty() {
@@ -77,6 +80,18 @@ mod tests {
         let b = [3, 2, 1, 4, 5];
 
         assert_eq!(compare(&a, &b), Comparison::Other);
+
+        let a: Vec<_> = (0..1_000_000).collect();
+        let mut b: Vec<_> = (500_000..700_000).collect();
+        b[100000] = 4567;
+
+        assert_eq!(compare(&a, &b), Comparison::Other);
+
+        let a: Vec<_> = vec![0; 1_000_000];
+        let mut b: Vec<_> = vec![0; 100_000];
+        *b.last_mut().unwrap() = 1;
+
+        assert_eq!(compare(&a, &b), Comparison::Other);
     }
 
     #[test]
@@ -100,5 +115,17 @@ mod tests {
         let b = [1, 2, 3, 4, 5];
         assert_eq!(compare(&a, &b), Comparison::Sublist);
         assert_eq!(compare(&b, &a), Comparison::Superlist);
+
+        let a: Vec<_> = (0..1_000_000).collect();
+        let b: Vec<_> = (500_000..700_000).collect();
+        assert_eq!(compare(&b, &a), Comparison::Sublist);
+        assert_eq!(compare(&a, &b), Comparison::Superlist);
+
+        let mut a: Vec<_> = vec![0; 1_000_000];
+        let mut b: Vec<_> = vec![0; 100_000];
+        *b.last_mut().unwrap() = 1;
+        *a.last_mut().unwrap() = 1;
+        assert_eq!(compare(&b, &a), Comparison::Sublist);
+        assert_eq!(compare(&a, &b), Comparison::Superlist);
     }
 }

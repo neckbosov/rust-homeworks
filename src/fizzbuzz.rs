@@ -33,13 +33,13 @@ pub struct Matcher<T> {
 }
 
 impl<T> Matcher<T> {
-    pub fn new<F, S: ToString>(_predicate: F, _substitute_with: S) -> Matcher<T>
+    pub fn new<F, S: ToString>(predicate: F, substitute_with: S) -> Matcher<T>
     where
         F: Fn(&T) -> bool + 'static,
     {
         Self {
-            predicate: Box::new(_predicate),
-            substitution: _substitute_with.to_string(),
+            predicate: Box::new(predicate),
+            substitution: substitute_with.to_string(),
         }
     }
     pub fn apply(&self, val: &T) -> Option<String> {
@@ -70,34 +70,34 @@ impl<T: ToString> Fizzy<T> {
     }
 
     // можете использовать `mut self` в сигнатуре, если вам нравится
-    pub fn add_matcher(mut self, _matcher: Matcher<T>) -> Self {
-        self.matchers.push(_matcher);
+    pub fn add_matcher(mut self, matcher: Matcher<T>) -> Self {
+        self.matchers.push(matcher);
         self
     }
 
     /// Применяет набор Matchers к данному значению
-    pub fn apply_elem(&self, elem: &T) -> String {
+    pub fn apply_item(&self, item: &T) -> String {
         let res = self
             .matchers
             .iter()
-            .map(|matcher| matcher.apply(elem))
+            .map(|matcher| matcher.apply(item))
             .flatten()
             .collect::<Vec<_>>()
             .concat();
         if res.is_empty() {
-            elem.to_string()
+            item.to_string()
         } else {
             res
         }
     }
     /// Применяет набор Matchers к каждому элементу итератора
-    pub fn apply<I>(&self, _iter: I) -> FizzyIterator<I>
+    pub fn apply<I>(&self, iter: I) -> FizzyIterator<I>
     where
         I: Iterator<Item = T>,
     {
         FizzyIterator {
             fizzy: self,
-            iter: _iter,
+            iter,
         }
     }
 }
@@ -114,7 +114,7 @@ where
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|elem| self.fizzy.apply_elem(&elem))
+        self.iter.next().map(|item| self.fizzy.apply_item(&item))
     }
 }
 
@@ -247,7 +247,7 @@ mod tests {
     fn test_map() {
         let fizzbuzz = fizz_buzz::<i32>();
         let got = (1..=16)
-            .map(|x| fizzbuzz.apply_elem(&x))
+            .map(|x| fizzbuzz.apply_item(&x))
             .collect::<Vec<_>>();
         assert_eq!(expect!(), got);
     }
