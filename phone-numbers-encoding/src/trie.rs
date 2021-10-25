@@ -1,17 +1,17 @@
-use std::collections::VecDeque;
+use std::collections::{VecDeque, BTreeMap};
 use std::ptr::NonNull;
 
-struct TrieNode<'a> {
-    terminators: Vec<&'a str>,
+struct TrieNode {
+    terminators: Vec<String>,
     len: usize,
-    next: [TrieLink<'a>; 10],
-    s_link: TrieLink<'a>,
-    ts_link: TrieLink<'a>,
+    next: [TrieLink; 10],
+    s_link: TrieLink,
+    ts_link: TrieLink,
 }
 
-type TrieLink<'a> = Option<NonNull<TrieNode<'a>>>;
+type TrieLink = Option<NonNull<TrieNode>>;
 
-impl<'a> TrieNode<'a> {
+impl TrieNode {
     fn new() -> Self {
         Self {
             terminators: Vec::new(),
@@ -26,12 +26,12 @@ impl<'a> TrieNode<'a> {
     }
 }
 
-pub struct Trie<'a> {
-    root: TrieLink<'a>,
+pub struct Trie {
+    root: TrieLink,
 }
 
 
-impl<'a> Trie<'a> {
+impl Trie {
     pub fn new() -> Self {
         let root_node = Box::new(TrieNode::new());
         let root_node = Box::into_raw(root_node);
@@ -39,7 +39,7 @@ impl<'a> Trie<'a> {
             root: NonNull::new(root_node),
         }
     }
-    pub fn add_seq(&mut self, digits: &[usize], word: &'a str) {
+    pub fn add_seq(&mut self, digits: &[usize], word: String) {
         let mut cur_node = self.root.unwrap().as_ptr();
         for digit in digits {
             unsafe {
@@ -92,22 +92,24 @@ impl<'a> Trie<'a> {
             }
         }
     }
-    fn get_terminators_recursive(&self, cur_node: TrieLink<'a>) -> Vec<(usize, &[&'a str])> {
+    fn get_terminators_recursive(&self, cur_node: TrieLink) -> BTreeMap<usize, &[String]> {
         let mut cur_node = cur_node.unwrap().as_ptr();
-        let mut buf = Vec::new();
+        let mut buf = BTreeMap::new();
         unsafe {
             if (*cur_node).is_terminal() {
-                buf.push(((*cur_node).len, (*cur_node).terminators.as_slice()))
+                buf.insert((*cur_node).len, (*cur_node).terminators.as_slice());
             }
         }
         while let Some(node) = unsafe { (*cur_node).ts_link } {
             let node = node.as_ptr();
-            buf.push(unsafe { ((*node).len, (*node).terminators.as_slice()) });
+            unsafe {
+                buf.insert((*node).len, (*node).terminators.as_slice());
+            }
             cur_node = node;
         }
         buf
     }
-    fn next_node(&self, cur_node: TrieLink<'a>, symbol: usize) -> TrieLink<'a> {
+    fn next_node(&self, cur_node: TrieLink, symbol: usize) -> TrieLink {
         let mut node_link = cur_node;
         while let Some(node) = node_link {
             let node = node.as_ptr();
@@ -120,8 +122,9 @@ impl<'a> Trie<'a> {
         }
         self.root
     }
-    pub fn find_all_occurrences(&self, seq: &[usize]) -> Vec<Vec<(usize, &[&'a str])>> {
-        let mut res = Vec::with_capacity(seq.len());
+    pub fn find_all_occurrences(&self, seq: &[usize]) -> Vec<BTreeMap<usize, &[String]>> {
+        let mut res = Vec::with_capacity(seq.len() + 1);
+        res.push(BTreeMap::new());
         let mut cur_node = self.root;
         for item in seq {
             cur_node = self.next_node(cur_node, *item);
@@ -149,7 +152,7 @@ impl<'a> Trie<'a> {
     }
 }
 
-impl<'a> Drop for Trie<'a> {
+impl Drop for Trie {
     fn drop(&mut self) {
         self.delete_links();
         let mut vertex_queue = VecDeque::new();
@@ -172,24 +175,47 @@ impl<'a> Drop for Trie<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use crate::trie::Trie;
 
     #[test]
     fn test_simple_find_occurrences() {
         let mut trie = Trie::new();
         let buf = vec![1, 2, 3, 1, 2, 4];
-        trie.add_seq(&buf[0..2], "kek");
-        trie.add_seq(&buf[0..3], "mem");
-        trie.add_seq(&buf[1..3], "lol");
+        trie.add_seq(&buf[0..2], "kek".to_string());
+        trie.add_seq(&buf[0..3], "mem".to_string());
+        trie.add_seq(&buf[1..3], "lol".to_string());
+        trie.build();
+        let occurrences = trie.find_all_occurrences(&buf);
+
+        assert_eq!(occurrences, vec![
+            BTreeMap::new(),
+            BTreeMap::new(),
+            BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
+            BTreeMap::from([(3, vec!["mem".to_string()].as_slice()), (2, vec!["lol".to_string()].as_slice())]),
+            BTreeMap::from([]),
+            BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
+            BTreeMap::from([]),
+        ]);
+    }
+
+    #[test]
+    fn test_another() {
+        let mut trie = Trie::new();
+
+        let buf = vec![5, 6, 2, 4, 8, 2];
+        trie.add_seq(&buf[0..3], "mix".to_string());
+        trie.add_seq(&buf[3..], "Tor".to_string());
         trie.build();
         let occurrences = trie.find_all_occurrences(&buf);
         assert_eq!(occurrences, vec![
-            vec![],
-            vec![(2, vec!["kek"].as_slice())],
-            vec![(3, vec!["mem"].as_slice()), (2, vec!["lol"].as_slice())],
-            vec![],
-            vec![(2, vec!["kek"].as_slice())],
-            vec![],
+            BTreeMap::new(),
+            BTreeMap::new(),
+            BTreeMap::new(),
+            BTreeMap::from([(3, vec!["mix".to_string()].as_slice())]),
+            BTreeMap::new(),
+            BTreeMap::new(),
+            BTreeMap::from([(3, vec!["Tor".to_string()].as_slice())]),
         ]);
     }
 }
