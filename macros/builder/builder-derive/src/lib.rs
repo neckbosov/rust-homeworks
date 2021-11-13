@@ -55,31 +55,21 @@ fn get_field_kind(field: &Field) -> Result<FieldKind, syn::Error> {
             }
         }) {
 
-            let meta_res = attr.parse_meta();
-            let meta = match meta_res {
-                Result::Ok(meta) => {
-                    // dbg!("Parsed meta");
-                    meta
-                }
-                Result::Err(e) => {
-                    // dbg!("Parsing failed");
-                    return Err(e.into());
-                }
-            };
+            let meta = attr.parse_meta()?;
 
             let meta_list = if let Meta::List(ref meta_list) = meta {
                 meta_list
             } else {
-                return Err(syn::Error::new(
-                    meta.span(),
+                return Err(syn::Error::new_spanned(
+                    meta,
                     "Incorrent type of attribute parameters, each = <value> expected",
                 ));
             };
 
             let nested_meta = &meta_list.nested;
             if nested_meta.len() != 1 {
-                return Err(syn::Error::new(
-                    meta.span(),
+                return Err(syn::Error::new_spanned(
+                    nested_meta,
                     format!(
                         "Incorrent number of attribute parameters, 1 expected, {} got",
                         nested_meta.len()
@@ -89,8 +79,8 @@ fn get_field_kind(field: &Field) -> Result<FieldKind, syn::Error> {
             let inner_meta = match nested_meta.first().unwrap() {
                 NestedMeta::Meta(meta) => meta,
                 NestedMeta::Lit(_) => {
-                    return Err(syn::Error::new(
-                        meta.span(),
+                    return Err(syn::Error::new_spanned(
+                        nested_meta,
                         "Incorrent type of attribute parameters, each = <value> expected",
                     ));
                 }
@@ -99,16 +89,16 @@ fn get_field_kind(field: &Field) -> Result<FieldKind, syn::Error> {
             let name_value = if let Meta::NameValue(name_value) = inner_meta {
                 name_value
             } else {
-                return Err(syn::Error::new(
-                    meta.span(),
+                return Err(syn::Error::new_spanned(
+                    inner_meta,
                     "Incorrent type of attribute parameters, each = <value> expected",
                 ));
             };
             if name_value.path.segments.len() == 1 {
                 let segment = name_value.path.segments.first().unwrap();
                 if !segment.arguments.is_empty() {
-                    return Err(syn::Error::new(
-                        segment.arguments.span(),
+                    return Err(syn::Error::new_spanned(
+                        &meta,
                         format!(
                             "Incorrent name of attribute parameter, `each` expected, `{}` got",
                             name_value.path.segments.len()
