@@ -3,7 +3,10 @@ use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Data, DeriveInput, Field, GenericArgument, Lit, Meta, NestedMeta, PathArguments, PathSegment, Type};
+use syn::{
+    parse_macro_input, Data, DeriveInput, Field, GenericArgument, Lit, Meta, NestedMeta,
+    PathArguments, PathSegment, Type,
+};
 
 enum FieldKind<'a> {
     Optional(&'a Type),
@@ -54,7 +57,6 @@ fn get_field_kind(field: &Field) -> Result<FieldKind, syn::Error> {
                 false
             }
         }) {
-
             let meta = attr.parse_meta()?;
 
             let meta_list = if let Meta::List(ref meta_list) = meta {
