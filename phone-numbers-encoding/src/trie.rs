@@ -1,4 +1,4 @@
-use std::collections::{VecDeque, BTreeMap};
+use std::collections::{BTreeMap, VecDeque};
 use std::ptr::NonNull;
 
 struct TrieNode {
@@ -29,7 +29,6 @@ impl TrieNode {
 pub struct Trie {
     root: TrieLink,
 }
-
 
 impl Trie {
     pub fn new() -> Self {
@@ -92,18 +91,18 @@ impl Trie {
             }
         }
     }
-    fn get_terminators_recursive(&self, cur_node: TrieLink) -> BTreeMap<usize, &[String]> {
+    fn get_terminators_recursive(&self, cur_node: TrieLink) -> Vec<(usize, &[String])> {
         let mut cur_node = cur_node.unwrap().as_ptr();
-        let mut buf = BTreeMap::new();
+        let mut buf = Vec::new();
         unsafe {
             if (*cur_node).is_terminal() {
-                buf.insert((*cur_node).len, (*cur_node).terminators.as_slice());
+                buf.push(((*cur_node).len, (*cur_node).terminators.as_slice()));
             }
         }
         while let Some(node) = unsafe { (*cur_node).ts_link } {
             let node = node.as_ptr();
             unsafe {
-                buf.insert((*node).len, (*node).terminators.as_slice());
+                buf.push(((*node).len, (*node).terminators.as_slice()));
             }
             cur_node = node;
         }
@@ -122,9 +121,9 @@ impl Trie {
         }
         self.root
     }
-    pub fn find_all_occurrences(&self, seq: &[usize]) -> Vec<BTreeMap<usize, &[String]>> {
+    pub fn find_all_occurrences(&self, seq: &[usize]) -> Vec<Vec<(usize, &[String])>> {
         let mut res = Vec::with_capacity(seq.len() + 1);
-        res.push(BTreeMap::new());
+        res.push(Vec::new());
         let mut cur_node = self.root;
         for item in seq {
             cur_node = self.next_node(cur_node, *item);
@@ -175,8 +174,8 @@ impl Drop for Trie {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
     use crate::trie::Trie;
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_simple_find_occurrences() {
@@ -188,15 +187,21 @@ mod tests {
         trie.build();
         let occurrences = trie.find_all_occurrences(&buf);
 
-        assert_eq!(occurrences, vec![
-            BTreeMap::new(),
-            BTreeMap::new(),
-            BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
-            BTreeMap::from([(3, vec!["mem".to_string()].as_slice()), (2, vec!["lol".to_string()].as_slice())]),
-            BTreeMap::from([]),
-            BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
-            BTreeMap::from([]),
-        ]);
+        assert_eq!(
+            occurrences,
+            vec![
+                BTreeMap::new(),
+                BTreeMap::new(),
+                BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
+                BTreeMap::from([
+                    (3, vec!["mem".to_string()].as_slice()),
+                    (2, vec!["lol".to_string()].as_slice())
+                ]),
+                BTreeMap::from([]),
+                BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
+                BTreeMap::from([]),
+            ]
+        );
     }
 
     #[test]
@@ -208,14 +213,17 @@ mod tests {
         trie.add_seq(&buf[3..], "Tor".to_string());
         trie.build();
         let occurrences = trie.find_all_occurrences(&buf);
-        assert_eq!(occurrences, vec![
-            BTreeMap::new(),
-            BTreeMap::new(),
-            BTreeMap::new(),
-            BTreeMap::from([(3, vec!["mix".to_string()].as_slice())]),
-            BTreeMap::new(),
-            BTreeMap::new(),
-            BTreeMap::from([(3, vec!["Tor".to_string()].as_slice())]),
-        ]);
+        assert_eq!(
+            occurrences,
+            vec![
+                BTreeMap::new(),
+                BTreeMap::new(),
+                BTreeMap::new(),
+                BTreeMap::from([(3, vec!["mix".to_string()].as_slice())]),
+                BTreeMap::new(),
+                BTreeMap::new(),
+                BTreeMap::from([(3, vec!["Tor".to_string()].as_slice())]),
+            ]
+        );
     }
 }

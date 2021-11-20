@@ -1,7 +1,7 @@
+use crate::trie::Trie;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Stdout, Write};
-use crate::trie::Trie;
 
 mod trie;
 
@@ -35,7 +35,7 @@ fn read_dict(chars_encoding: HashMap<char, usize>) -> Trie {
         if digits.is_empty() {
             break;
         }
-        let mut tmp_string = buf.trim().to_string();
+        let tmp_string = buf.trim().to_string();
         trie.add_seq(&digits, tmp_string);
         buf.clear();
     }
@@ -47,8 +47,7 @@ struct AnswerCalcState<'a> {
     source_number: String,
     digits_str: Vec<String>,
     correct_positions: Vec<[bool; 2]>,
-    parent_distances: Vec<Vec<usize>>,
-    occurrences: Vec<BTreeMap<usize, &'a [String]>>,
+    occurrences: Vec<Vec<(usize, &'a [String])>>,
 }
 
 fn print_answers<'b, 'a: 'b>(
@@ -58,43 +57,54 @@ fn print_answers<'b, 'a: 'b>(
     buf: &mut Vec<&'b str>,
     writer: &mut BufWriter<Stdout>,
 ) {
-    if current_pos == 0 {
-        let mut new_buf = buf.clone();
-        new_buf.reverse();
-        writeln!(writer, "{}: {}", state.source_number, new_buf.join(" ")).expect("failed to write result");
+    if current_pos == state.digits_str.len() {
+        writeln!(writer, "{}: {}", state.source_number, buf.join(" "))
+            .expect("failed to write result");
         return;
     }
-    if state.correct_positions[current_pos][1] && !is_last_digit {
-        buf.push(&state.digits_str[current_pos - 1]);
-        print_answers(state, current_pos - 1, true, buf, writer);
-        buf.pop();
-    }
     if state.correct_positions[current_pos][0] {
-        for dist in &state.parent_distances[current_pos] {
-            debug_assert_ne!(*dist, 0);
-            for word in state.occurrences[current_pos][dist] {
+        for (dist, words) in &state.occurrences[current_pos] {
+            for word in *words {
                 buf.push(word);
-                print_answers(state, current_pos - dist, false, buf, writer);
+                print_answers(state, current_pos + dist, false, buf, writer);
                 buf.pop();
             }
         }
+    } else if state.correct_positions[current_pos][1] && !is_last_digit {
+        buf.push(&state.digits_str[current_pos]);
+        print_answers(state, current_pos + 1, true, buf, writer);
+        buf.pop();
     }
 }
 
-fn process_sequence(trie: &Trie, digits: Vec<usize>, source_number: String, writer: &mut BufWriter<Stdout>) {
-    let occurrences = trie.find_all_occurrences(&digits);
-    debug_assert!(occurrences[0].is_empty());
-    let mut correct_positions = vec![[false, false]; occurrences.len()];
-    correct_positions[0][0] = true;
-    let mut parent_distances = vec![vec![]; occurrences.len()];
-    for i in 1..correct_positions.len() {
-        for &word_len in occurrences[i].keys() {
-            if word_len <= i && (correct_positions[i - word_len][0] || correct_positions[i - word_len][1]) {
+fn process_sequence(
+    trie: &Trie,
+    digits: Vec<usize>,
+    source_number: String,
+    writer: &mut BufWriter<Stdout>,
+) {
+    let end_occurrences = trie.find_all_occurrences(&digits);
+    debug_assert!(end_occurrences[0].is_empty());
+    let mut correct_positions = vec![[false, false]; end_occurrences.len() + 1];
+    let mut start_occurrences = vec![Vec::new(); end_occurrences.len()];
+    for (i, occur) in end_occurrences.into_iter().enumerate() {
+        for (l, s) in occur {
+            start_occurrences[i - l].push((l, s));
+        }
+    }
+    correct_positions[digits.len()][0] = true;
+    for i in (0..start_occurrences.len()).rev() {
+        for (word_len, _) in &start_occurrences[i] {
+            if i + word_len < correct_positions.len()
+                && (correct_positions[i + word_len][0] || correct_positions[i + word_len][1])
+            {
                 correct_positions[i][0] = true;
-                parent_distances[i].push(word_len);
             }
         }
-        if i > 0 && correct_positions[i - 1][0] {
+        if i + 1 < correct_positions.len()
+            && !correct_positions[i][0]
+            && start_occurrences[i].is_empty()
+        {
             correct_positions[i][1] = true;
         }
     }
@@ -103,11 +113,10 @@ fn process_sequence(trie: &Trie, digits: Vec<usize>, source_number: String, writ
         source_number,
         digits_str,
         correct_positions,
-        parent_distances,
-        occurrences,
+        occurrences: start_occurrences,
     };
     let mut buf = Vec::new();
-    print_answers(&state, digits.len(), false, &mut buf, writer);
+    print_answers(&state, 0, false, &mut buf, writer);
 }
 
 fn main() {
@@ -121,7 +130,7 @@ fn main() {
         (6, vec!['c', 'i', 'v']),
         (7, vec!['b', 'k', 'u']),
         (8, vec!['l', 'o', 'p']),
-        (9, vec!['g', 'h', 'z'])
+        (9, vec!['g', 'h', 'z']),
     ]);
     let chars_encoding = convert_encoding(&digits_coding);
     let trie = read_dict(chars_encoding);
