@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{VecDeque};
 use std::ptr::NonNull;
 
 struct TrieNode {
@@ -175,7 +175,6 @@ impl Drop for Trie {
 #[cfg(test)]
 mod tests {
     use crate::trie::Trie;
-    use std::collections::BTreeMap;
 
     #[test]
     fn test_simple_find_occurrences() {
@@ -190,16 +189,16 @@ mod tests {
         assert_eq!(
             occurrences,
             vec![
-                BTreeMap::new(),
-                BTreeMap::new(),
-                BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
-                BTreeMap::from([
+                Vec::new(),
+                Vec::new(),
+                Vec::from([(2, vec!["kek".to_string()].as_slice())]),
+                Vec::from([
                     (3, vec!["mem".to_string()].as_slice()),
                     (2, vec!["lol".to_string()].as_slice())
                 ]),
-                BTreeMap::from([]),
-                BTreeMap::from([(2, vec!["kek".to_string()].as_slice())]),
-                BTreeMap::from([]),
+                Vec::from([]),
+                Vec::from([(2, vec!["kek".to_string()].as_slice())]),
+                Vec::from([]),
             ]
         );
     }
@@ -216,13 +215,13 @@ mod tests {
         assert_eq!(
             occurrences,
             vec![
-                BTreeMap::new(),
-                BTreeMap::new(),
-                BTreeMap::new(),
-                BTreeMap::from([(3, vec!["mix".to_string()].as_slice())]),
-                BTreeMap::new(),
-                BTreeMap::new(),
-                BTreeMap::from([(3, vec!["Tor".to_string()].as_slice())]),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::from([(3, vec!["mix".to_string()].as_slice())]),
+                Vec::new(),
+                Vec::new(),
+                Vec::from([(3, vec!["Tor".to_string()].as_slice())]),
             ]
         );
     }
