@@ -134,8 +134,6 @@ fn main() {
     ]);
     let chars_encoding = convert_encoding(&digits_coding);
     let trie = read_dict(chars_encoding);
-    // dbg!("Finished building");
-    // dbg!(&trie);
     let input_file = File::open("input.txt").expect("Failed to find input file");
     let mut input_reader = BufReader::new(input_file);
     let mut buf = String::new();
